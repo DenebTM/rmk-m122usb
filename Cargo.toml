@@ -25,6 +25,7 @@ portable-atomic = { version = "1.5", features = ["critical-section"] }
 defmt = "0.3"
 defmt-rtt = "0.4"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
+pc-keyboard = "0.8.0"
 
 # [features]
 # avoid having to use --allow-multiple-definition linker flag
