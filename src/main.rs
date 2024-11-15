@@ -7,6 +7,8 @@ mod keymap;
 mod macros;
 mod vial;
 
+mod ps2;
+
 use defmt::*;
 use defmt_rtt as _;
 use embassy_executor::Spawner;
@@ -21,7 +23,7 @@ use embassy_rp::{
 use panic_probe as _;
 use rmk::{
     config::{KeyboardUsbConfig, RmkConfig, VialConfig},
-    run_rmk_with_async_flash,
+    run_rmk_custom_matrix,
 };
 use vial::{VIAL_KEYBOARD_DEF, VIAL_KEYBOARD_ID};
 
@@ -65,10 +67,8 @@ async fn main(spawner: Spawner) {
     };
 
     // Start serving
-    // Use `run_rmk` for blocking flash
-    run_rmk_with_async_flash(
-        input_pins,
-        output_pins,
+    run_rmk_custom_matrix(
+        matrix,
         driver,
         flash,
         &mut keymap::get_default_keymap(),
