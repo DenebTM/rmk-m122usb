@@ -1,15 +1,13 @@
 use defmt::{error, warn};
-use pc_keyboard::{KeyEvent, Ps2Decoder, ScancodeSet, ScancodeSet2};
-
-type PS2Scancode = u16;
+use pc_keyboard::{KeyEvent, KeyCode, KeyState, Ps2Decoder, ScancodeSet, ScancodeSet2};
 
 pub(crate) struct PS2Port {
     clk_pin: u16,
     data_pin: u16,
 
-    scancode_queue: [pc_keyboard::KeyCode; 256],
-    scancode_queue_write: usize,
-    scancode_queue_read: usize,
+    event_queue: [(KeyCode, KeyState); 256],
+    event_queue_write: usize,
+    event_queue_read: usize,
 
     ps2_decoder: Ps2Decoder,
     scancode_processor: ScancodeSet2,
@@ -21,9 +19,9 @@ impl PS2Port {
             clk_pin,
             data_pin,
 
-            scancode_queue: [pc_keyboard::KeyCode::A; 256],
-            scancode_queue_write: 0,
-            scancode_queue_read: 0,
+            event_queue: [(pc_keyboard::KeyCode::A, pc_keyboard::KeyState::Up); 256],
+            event_queue_write: 0,
+            event_queue_read: 0,
 
             ps2_decoder: Ps2Decoder::new(),
             scancode_processor: ScancodeSet2::new(),
@@ -38,8 +36,8 @@ impl PS2Port {
             Ok(code) => {
                 match self.scancode_processor.advance_state(code) {
                     Ok(Some(KeyEvent { code, state })) => {
-                        self.scancode_queue[self.scancode_queue_write] = code;
-                        self.scancode_queue_write += 1;
+                        self.event_queue[self.event_queue_write] = (code, state);
+                        self.event_queue_write += 1;
                     }
                     Ok(None) => warn!("Scan code without effect??"),
                     Err(e) => error!("Error processing PS/2 scan code"),
@@ -51,11 +49,12 @@ impl PS2Port {
         };
     }
 
-    pub fn get_next(mut self) -> Option<pc_keyboard::KeyCode> {
-        if self.scancode_queue_read < self.scancode_queue_write {
+    pub fn get_next(&mut self) -> Option<KeyEvent> {
+        if self.event_queue_read < self.event_queue_write {
             // TODO: handle overflow
-            self.scancode_queue_read += 1;
-            Some(self.scancode_queue[self.scancode_queue_read - 1])
+            let (code, state) = self.event_queue[self.event_queue_read];
+            self.event_queue_read += 1;
+            Some(KeyEvent { code, state })
         } else {
             None
         }
