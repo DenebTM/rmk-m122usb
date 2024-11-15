@@ -1,6 +1,6 @@
 type PS2Scancode = u16;
 
-pub struct PS2Port {
+pub(crate) struct PS2Port {
     clk_pin: u16,
     data_pin: u16,
 
