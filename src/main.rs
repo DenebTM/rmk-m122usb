@@ -15,12 +15,13 @@ use embassy_executor::Spawner;
 use embassy_rp::{
     bind_interrupts,
     flash::{Async, Flash},
-    gpio::{AnyPin, Input, Output},
+    gpio::{AnyPin, Input, Output, Pull},
     peripherals::USB,
     usb::{Driver, InterruptHandler},
 };
 // use embassy_rp::flash::Blocking;
 use panic_probe as _;
+use ps2::matrix::PS2Matrix;
 use rmk::{
     config::{KeyboardUsbConfig, RmkConfig, VialConfig},
     run_rmk_custom_matrix,
@@ -30,6 +31,9 @@ use vial::{VIAL_KEYBOARD_DEF, VIAL_KEYBOARD_ID};
 bind_interrupts!(struct Irqs {
     USBCTRL_IRQ => InterruptHandler<USB>;
 });
+
+const ROW: usize = 7;
+const COL: usize = 23;
 
 const FLASH_SIZE: usize = 2 * 1024 * 1024;
 
@@ -43,7 +47,11 @@ async fn main(spawner: Spawner) {
     let driver = Driver::new(p.USB, Irqs);
 
     // Pin config
-    let (input_pins, output_pins) = config_matrix_pins_rp!(peripherals: p, input: [PIN_6, PIN_7, PIN_8, PIN_9], output: [PIN_19, PIN_20, PIN_21]);
+    let clk_pin = Input::new(p.PIN_2, Pull::Up);
+    let data_pin = Input::new(p.PIN_3, Pull::Up);
+
+    // Custom matrix
+    let matrix: PS2Matrix<ROW, COL> = PS2Matrix::new(clk_pin, data_pin);
 
     // Use internal flash to emulate eeprom
     // Both blocking and async flash are support, use different API
@@ -60,7 +68,7 @@ async fn main(spawner: Spawner) {
 
     let vial_config = VialConfig::new(VIAL_KEYBOARD_ID, VIAL_KEYBOARD_DEF);
 
-    let keyboard_config = RmkConfig {
+    let keyboard_config: RmkConfig<Output<'static>> = RmkConfig {
         usb_config: keyboard_usb_config,
         vial_config,
         ..Default::default()

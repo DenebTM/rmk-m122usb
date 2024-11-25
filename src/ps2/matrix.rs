@@ -1,4 +1,5 @@
 use defmt::error;
+use embassy_rp::gpio::Input;
 use pc_keyboard::KeyCode;
 use rmk::{
     keyboard::{key_event_channel, KeyEvent},
@@ -10,6 +11,15 @@ use super::port::PS2Port;
 pub struct PS2Matrix<const ROW: usize, const COL: usize> {
     port: PS2Port,
     matrix: [[KeyState; COL]; ROW],
+}
+
+impl<const ROW: usize, const COL: usize> PS2Matrix<ROW, COL> {
+    pub fn new(clk_pin: Input<'static>, data_pin: Input<'static>) -> Self {
+        Self {
+            port: PS2Port::new(clk_pin, data_pin),
+            matrix: [[KeyState { pressed: false }; COL]; ROW],
+        }
+    }
 }
 
 fn keycode_to_pos(keycode: KeyCode) -> (usize, usize) {
