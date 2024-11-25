@@ -15,7 +15,7 @@ use embassy_executor::Spawner;
 use embassy_rp::{
     bind_interrupts,
     flash::{Async, Flash},
-    gpio::{AnyPin, Input, Output, Pull},
+    gpio::{Input, Output, Pull},
     peripherals::USB,
     usb::{Driver, InterruptHandler},
 };
