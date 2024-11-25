@@ -1,9 +1,10 @@
 use defmt::{error, warn};
-use pc_keyboard::{KeyEvent, KeyCode, KeyState, Ps2Decoder, ScancodeSet, ScancodeSet2};
+use embassy_rp::gpio::Input;
+use pc_keyboard::{KeyCode, KeyEvent, KeyState, Ps2Decoder, ScancodeSet, ScancodeSet2};
 
 pub(crate) struct PS2Port {
-    clk_pin: u16,
-    data_pin: u16,
+    clk_pin: Input<'static>,
+    data_pin: Input<'static>,
 
     event_queue: [(KeyCode, KeyState); 256],
     event_queue_write: usize,
@@ -14,7 +15,7 @@ pub(crate) struct PS2Port {
 }
 
 impl PS2Port {
-    pub fn new(clk_pin: u16, data_pin: u16) -> Self {
+    pub fn new(clk_pin: Input<'static>, data_pin: Input<'static>) -> Self {
         Self {
             clk_pin,
             data_pin,
@@ -28,8 +29,8 @@ impl PS2Port {
         }
     }
 
-    pub fn read(&mut self) {
-        let ps2_data: u16 = 0; // TODO
+    pub async fn read(&mut self) {
+        let ps2_data = self.get_ps2_data().await;
 
         let decode_result = self.ps2_decoder.add_word(ps2_data);
         match decode_result {
@@ -58,5 +59,17 @@ impl PS2Port {
         } else {
             None
         }
+    }
+
+    async fn get_ps2_data(&mut self) -> u16 {
+        self.clk_pin.wait_for_falling_edge().await;
+
+        let mut data: u16 = 0;
+        // read 1 start bit, 8 data bits, 1 parity bit, 1 stop bit
+        for _ in 0..11 {
+            self.clk_pin.wait_for_rising_edge().await;
+            data = (data << 1) | (self.data_pin.is_high() as u16);
+        }
+        return data;
     }
 }
