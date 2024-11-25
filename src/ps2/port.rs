@@ -29,7 +29,20 @@ impl PS2Port {
         }
     }
 
-    pub async fn read(&mut self) {
+    pub fn pop_event(&mut self) -> Option<KeyEvent> {
+        if self.event_queue_read < self.event_queue_write {
+            // TODO: handle overflow
+            let (code, state) = self.event_queue[self.event_queue_read];
+            self.event_queue_read += 1;
+            Some(KeyEvent { code, state })
+        } else {
+            None
+        }
+    }
+
+    /// wait for and decode the next PS/2 data packet
+    /// if this completes a key event, add it to the event queue
+    pub async fn decode_next(&mut self) {
         let ps2_data = self.get_ps2_data().await;
 
         let decode_result = self.ps2_decoder.add_word(ps2_data);
@@ -48,17 +61,6 @@ impl PS2Port {
                 error!("Error decoding PS/2 data");
             }
         };
-    }
-
-    pub fn get_next(&mut self) -> Option<KeyEvent> {
-        if self.event_queue_read < self.event_queue_write {
-            // TODO: handle overflow
-            let (code, state) = self.event_queue[self.event_queue_read];
-            self.event_queue_read += 1;
-            Some(KeyEvent { code, state })
-        } else {
-            None
-        }
     }
 
     async fn get_ps2_data(&mut self) -> u16 {
