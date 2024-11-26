@@ -687,9 +687,9 @@ dependencies = [
 
 [[package]]
 name = "fixed"
-version = "1.24.0"
+version = "1.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02c69ce7e7c0f17aa18fdd9d0de39727adb9c6281f2ad12f57cbe54ae6e76e7d"
+checksum = "85c6e0b89bf864acd20590dbdbad56f69aeb898abfc9443008fd7bd48b2cc85a"
 dependencies = [
  "az",
  "bytemuck",
@@ -1410,9 +1410,13 @@ dependencies = [
  "embassy-rp",
  "embassy-sync",
  "embassy-time",
+ "embedded-io-async",
+ "fixed",
  "json",
  "panic-probe",
  "pc-keyboard",
+ "pio",
+ "pio-proc",
  "portable-atomic",
  "rmk",
  "static_cell",
