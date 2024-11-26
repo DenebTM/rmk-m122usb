@@ -4,6 +4,15 @@ install_crate = { rustup_component_name = "llvm-tools" }
 [tasks.flip-link]
 install_crate = { crate_name = "flip-link", binary = "flip-link", test_arg = ["flip-link", "-h"] }
 
+[tasks.objcopy-debug]
+install_crate = { crate_name = "cargo-binutils", binary = "cargo", test_arg = [
+    "objcopy",
+    "--help",
+] }
+command = "cargo"
+args = ["objcopy", "--", "-O", "ihex", "rmk.hex"]
+dependencies = ["install-llvm-tools", "flip-link"]
+
 [tasks.objcopy]
 install_crate = { crate_name = "cargo-binutils", binary = "cargo", test_arg = [
     "objcopy",
@@ -13,7 +22,7 @@ command = "cargo"
 args = ["objcopy", "--release", "--", "-O", "ihex", "rmk.hex"]
 dependencies = ["install-llvm-tools", "flip-link"]
 
-[tasks.uf2]
+[tasks.uf2conf]
 command = "python"
 args = [
     "rmk/scripts/uf2conv.py",
@@ -24,4 +33,19 @@ args = [
     "-o",
     "rmk.uf2",
 ]
-dependencies = ["objcopy"]
+
+[tasks.uf2]
+dependencies = ["objcopy", "uf2conf"]
+
+[tasks.uf2-debug]
+command = "python"
+args = [
+    "rmk/scripts/uf2conv.py",
+    "rmk.hex",
+    "-c",
+    "-f",
+    "0xe48bff56",                  # Use your chip family ID in the uf2conv.py file as -f argument
+    "-o",
+    "rmk.uf2",
+]
+dependencies = ["objcopy-debug", "uf2conf"]
