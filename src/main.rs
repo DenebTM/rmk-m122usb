@@ -15,7 +15,7 @@ use embassy_executor::Spawner;
 use embassy_rp::{
     bind_interrupts,
     flash::{Async, Flash},
-    gpio::{Input, Output, Pull},
+    gpio::{Input, Level, Output, Pull},
     peripherals::USB,
     usb::{Driver, InterruptHandler},
 };
@@ -56,10 +56,12 @@ async fn main(spawner: Spawner) {
     // Create the usb driver, from the HAL
     let driver = Driver::new(p.USB, Irqs);
 
+    let led_pin = Output::new(p.PIN_25, Level::Low);
+
     // Initialize PS/2 port
     let clk_pin = Input::new(p.PIN_2, Pull::Up);
     let data_pin = Input::new(p.PIN_3, Pull::Up);
-    let ps2_port = PS2Port::new(clk_pin, data_pin);
+    let ps2_port = PS2Port::new(clk_pin, data_pin, led_pin);
     static PS2_PORT: StaticCell<PS2AsyncMutex> = StaticCell::new();
     let ps2_port = PS2_PORT.init(Mutex::new(ps2_port));
 

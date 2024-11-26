@@ -1,11 +1,13 @@
 use defmt::{error, info, warn};
-use embassy_rp::gpio::Input;
+use embassy_rp::gpio::{Input, Output};
 use embassy_time::{with_timeout, Duration, TimeoutError};
 use pc_keyboard::{KeyCode, KeyEvent, KeyState, Ps2Decoder, ScancodeSet, ScancodeSet2};
 
 pub(crate) struct PS2Port {
     clk_pin: Input<'static>,
     data_pin: Input<'static>,
+
+    led_pin: Output<'static>,
 
     event_queue: [(KeyCode, KeyState); 256],
     event_queue_write: usize,
@@ -16,10 +18,12 @@ pub(crate) struct PS2Port {
 }
 
 impl PS2Port {
-    pub fn new(clk_pin: Input<'static>, data_pin: Input<'static>) -> Self {
+    pub fn new(clk_pin: Input<'static>, data_pin: Input<'static>, led_pin: Output<'static>) -> Self {
         Self {
             clk_pin,
             data_pin,
+
+            led_pin,
 
             event_queue: [(pc_keyboard::KeyCode::A, pc_keyboard::KeyState::Up); 256],
             event_queue_write: 0,
@@ -68,6 +72,8 @@ impl PS2Port {
         self.clk_pin.wait_for_falling_edge().await;
         info!("Got start of PS/2 packet");
 
+        self.led_pin.set_high();
+
         let mut data: u16 = 0;
         // read 1 start bit, 8 data bits, 1 parity bit, 1 stop bit
         for _ in 0..11 {
@@ -81,10 +87,13 @@ impl PS2Port {
 
                 Err(e) => {
                     error!("Timeout while reading PS/2 packet");
+                    self.led_pin.set_low();
                     return Err(e);
                 }
             }
         }
+
+        self.led_pin.set_low();
 
         Ok(data)
     }
