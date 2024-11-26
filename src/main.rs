@@ -20,6 +20,7 @@ use embassy_rp::{
     usb::{Driver, InterruptHandler},
 };
 use embassy_sync::mutex::Mutex;
+use keymap::{COL, ROW};
 // use embassy_rp::flash::Blocking;
 use panic_probe as _;
 use ps2::{
@@ -36,9 +37,6 @@ use vial::{VIAL_KEYBOARD_DEF, VIAL_KEYBOARD_ID};
 bind_interrupts!(struct Irqs {
     USBCTRL_IRQ => InterruptHandler<USB>;
 });
-
-const ROW: usize = 7;
-const COL: usize = 23;
 
 const FLASH_SIZE: usize = 2 * 1024 * 1024;
 
