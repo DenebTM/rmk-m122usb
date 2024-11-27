@@ -18,7 +18,11 @@ pub(crate) struct PS2Port {
 }
 
 impl PS2Port {
-    pub fn new(clk_pin: Input<'static>, data_pin: Input<'static>, led_pin: Output<'static>) -> Self {
+    pub fn new(
+        clk_pin: Input<'static>,
+        data_pin: Input<'static>,
+        led_pin: Output<'static>,
+    ) -> Self {
         Self {
             clk_pin,
             data_pin,
@@ -78,7 +82,7 @@ impl PS2Port {
         // read 1 start bit, 8 data bits, 1 parity bit, 1 stop bit
         for _ in 0..11 {
             match with_timeout(
-                Duration::from_millis(1000),
+                Duration::from_millis(10),
                 self.clk_pin.wait_for_rising_edge(),
             )
             .await
