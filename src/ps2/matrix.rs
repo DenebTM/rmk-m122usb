@@ -1,4 +1,4 @@
-use defmt::error;
+use defmt::{error, info};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use pc_keyboard::KeyCode;
 use rmk::{
@@ -44,22 +44,30 @@ impl<const ROW: usize, const COL: usize> MatrixTrait for PS2Matrix<ROW, COL> {
     }
 
     async fn scan(&mut self) {
-        while let Some(pc_keyboard::KeyEvent { code, state }) = self.port.lock().await.pop_event() {
-            defmt::debug!("Processing PS/2 key event");
-            let (row, col) = keycode_to_pos(code);
+        info!("PS/2 matrix scanning task");
 
-            self.matrix[row][col] = KeyState {
-                pressed: state == pc_keyboard::KeyState::Down,
-            };
+        loop {
+            while let Some(pc_keyboard::KeyEvent { code, state }) =
+                self.port.lock().await.pop_event()
+            {
+                defmt::debug!("Processing PS/2 key event");
+                let (row, col) = keycode_to_pos(code);
 
-            let send_re = key_event_channel.try_send(KeyEvent {
-                row: row as u8,
-                col: col as u8,
-                pressed: self.matrix[row][col].pressed,
-            });
-            if send_re.is_err() {
-                error!("Failed to send key event: key event channel full");
+                self.matrix[row][col] = KeyState {
+                    pressed: state == pc_keyboard::KeyState::Down,
+                };
+
+                let send_re = key_event_channel.try_send(KeyEvent {
+                    row: row as u8,
+                    col: col as u8,
+                    pressed: self.matrix[row][col].pressed,
+                });
+                if send_re.is_err() {
+                    error!("Failed to send key event: key event channel full");
+                }
             }
+
+            embassy_time::Timer::after_micros(100).await;
         }
     }
 
