@@ -3,15 +3,46 @@ use embassy_rp::gpio::{Input, Output};
 use embassy_time::{with_timeout, Duration, TimeoutError};
 use pc_keyboard::{KeyCode, KeyEvent, KeyState, Ps2Decoder, ScancodeSet, ScancodeSet2};
 
+struct EventQueue<T: Copy, const S: usize> {
+    write: usize,
+    read: usize,
+
+    events: [T; S],
+}
+
+impl<T: Copy, const S: usize> EventQueue<T, S> {
+    pub fn new(init: T) -> Self {
+        Self {
+            events: [init; S],
+            write: 0,
+            read: 0,
+        }
+    }
+
+    pub fn push(&mut self, event: T) {
+        self.events[self.write] = event;
+        self.write += 1;
+    }
+
+    pub fn pop(&mut self) -> Option<T> {
+        if self.read < self.write {
+            // TODO: handle overflow
+            let event = self.events[self.read];
+            self.read += 1;
+            Some(event)
+        } else {
+            None
+        }
+    }
+}
+
 pub(crate) struct PS2Port {
     clk_pin: Input<'static>,
     data_pin: Input<'static>,
 
     led_pin: Output<'static>,
 
-    event_queue: [(KeyCode, KeyState); 256],
-    event_queue_write: usize,
-    event_queue_read: usize,
+    event_queue: EventQueue<(KeyCode, KeyState), 256>,
 
     ps2_decoder: Ps2Decoder,
     scancode_processor: ScancodeSet2,
@@ -26,27 +57,17 @@ impl PS2Port {
         Self {
             clk_pin,
             data_pin,
-
             led_pin,
-
-            event_queue: [(pc_keyboard::KeyCode::A, pc_keyboard::KeyState::Up); 256],
-            event_queue_write: 0,
-            event_queue_read: 0,
-
-            ps2_decoder: Ps2Decoder::new(),
+            event_queue: EventQueue::new((pc_keyboard::KeyCode::A, pc_keyboard::KeyState::Up)),
             scancode_processor: ScancodeSet2::new(),
+            ps2_decoder: Ps2Decoder::new(),
         }
     }
 
     pub fn pop_event(&mut self) -> Option<KeyEvent> {
-        if self.event_queue_read < self.event_queue_write {
-            // TODO: handle overflow
-            let (code, state) = self.event_queue[self.event_queue_read];
-            self.event_queue_read += 1;
-            Some(KeyEvent { code, state })
-        } else {
-            None
-        }
+        self.event_queue
+            .pop()
+            .map(|(code, state)| KeyEvent { code, state })
     }
 
     /// wait for and decode the next PS/2 data packet
@@ -57,10 +78,7 @@ impl PS2Port {
             match decode_result {
                 Ok(code) => {
                     match self.scancode_processor.advance_state(code) {
-                        Ok(Some(KeyEvent { code, state })) => {
-                            self.event_queue[self.event_queue_write] = (code, state);
-                            self.event_queue_write += 1;
-                        }
+                        Ok(Some(KeyEvent { code, state })) => self.event_queue.push((code, state)),
                         Ok(None) => warn!("Scan code without effect??"),
                         Err(e) => error!(
                             "Error processing PS/2 scan code: {:?}",
