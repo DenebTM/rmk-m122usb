@@ -42,6 +42,7 @@ const FLASH_SIZE: usize = 2 * 1024 * 1024;
 
 #[embassy_executor::task]
 async fn ps2_background_read(port: &'static PS2AsyncMutex) {
+    info!("Begin PS/2 background task");
     loop {
         port.lock().await.decode_next().await;
     }
@@ -64,9 +65,6 @@ async fn main(spawner: Spawner) {
     let ps2_port = PS2Port::new(clk_pin, data_pin, led_pin);
     static PS2_PORT: StaticCell<PS2AsyncMutex> = StaticCell::new();
     let ps2_port = PS2_PORT.init(Mutex::new(ps2_port));
-
-    // Set up background process to read bit-banged PS/2 data
-    spawner.must_spawn(ps2_background_read(ps2_port));
 
     // Create key matrix
     let matrix: PS2Matrix<ROW, COL> = PS2Matrix::new(ps2_port);
@@ -91,6 +89,9 @@ async fn main(spawner: Spawner) {
         vial_config,
         ..Default::default()
     };
+
+    // Set up background process to read bit-banged PS/2 data
+    spawner.must_spawn(ps2_background_read(ps2_port));
 
     // Start serving
     run_rmk_custom_matrix(
