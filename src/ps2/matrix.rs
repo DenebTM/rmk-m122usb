@@ -1,4 +1,5 @@
 use defmt::error;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use pc_keyboard::KeyCode;
 use rmk::{
     keyboard::{key_event_channel, KeyEvent},
@@ -7,13 +8,15 @@ use rmk::{
 
 use super::port::PS2Port;
 
+pub type PS2AsyncMutex = Mutex<CriticalSectionRawMutex, PS2Port>;
+
 pub struct PS2Matrix<const ROW: usize, const COL: usize> {
-    port: &'static PS2Port,
+    port: &'static PS2AsyncMutex,
     matrix: [[KeyState; COL]; ROW],
 }
 
 impl<const ROW: usize, const COL: usize> PS2Matrix<ROW, COL> {
-    pub fn new(port: &'static PS2Port) -> Self {
+    pub fn new(port: &'static PS2AsyncMutex) -> Self {
         Self {
             port,
             matrix: [[KeyState { pressed: false }; COL]; ROW],
@@ -41,7 +44,7 @@ impl<const ROW: usize, const COL: usize> MatrixTrait for PS2Matrix<ROW, COL> {
     }
 
     async fn scan(&mut self) {
-        while let Some(pc_keyboard::KeyEvent { code, state }) = self.port.pop_event().await {
+        while let Some(pc_keyboard::KeyEvent { code, state }) = self.port.lock().await.pop_event() {
             defmt::debug!("Processing PS/2 key event");
             let (row, col) = keycode_to_pos(code);
 
