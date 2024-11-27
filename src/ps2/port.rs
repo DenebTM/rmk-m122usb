@@ -19,9 +19,15 @@ impl<T: Copy, const S: usize> EventQueue<T, S> {
         }
     }
 
-    fn push(&mut self, event: T) {
+    fn push(&mut self, event: T) -> Result<(), ()> {
+        if (self.write + 1) % S == self.read {
+            return Err(());
+        }
+
         self.events[self.write] = event;
         self.write = (self.write + 1) % S;
+
+        Ok(())
     }
 
     fn pop(&mut self) -> Option<T> {
@@ -78,7 +84,11 @@ impl PS2Port {
             match decode_result {
                 Ok(code) => {
                     match self.scancode_processor.advance_state(code) {
-                        Ok(Some(KeyEvent { code, state })) => self.event_queue.push((code, state)),
+                        Ok(Some(KeyEvent { code, state })) => {
+                            if self.event_queue.push((code, state)).is_err() {
+                                error!("Event queue is full!")
+                            }
+                        }
                         Ok(None) => warn!("Scan code without effect??"),
                         Err(e) => error!(
                             "Error processing PS/2 scan code: {:?}",
