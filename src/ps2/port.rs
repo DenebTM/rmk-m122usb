@@ -11,7 +11,7 @@ struct EventQueue<T: Copy, const S: usize> {
 }
 
 impl<T: Copy, const S: usize> EventQueue<T, S> {
-    pub fn new(init: T) -> Self {
+    fn new(init: T) -> Self {
         Self {
             events: [init; S],
             write: 0,
@@ -19,16 +19,16 @@ impl<T: Copy, const S: usize> EventQueue<T, S> {
         }
     }
 
-    pub fn push(&mut self, event: T) {
+    fn push(&mut self, event: T) {
         self.events[self.write] = event;
-        self.write += 1;
+        self.write = (self.write + 1) % S;
     }
 
-    pub fn pop(&mut self) -> Option<T> {
+    fn pop(&mut self) -> Option<T> {
         if self.read < self.write {
             // TODO: handle overflow
             let event = self.events[self.read];
-            self.read += 1;
+            self.read = (self.read + 1) % S;
             Some(event)
         } else {
             None
