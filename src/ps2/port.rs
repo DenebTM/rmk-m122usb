@@ -62,11 +62,14 @@ impl PS2Port {
                             self.event_queue_write += 1;
                         }
                         Ok(None) => warn!("Scan code without effect??"),
-                        Err(e) => error!("Error processing PS/2 scan code"),
+                        Err(e) => error!(
+                            "Error processing PS/2 scan code: {:?}",
+                            defmt::Debug2Format(&e)
+                        ),
                     };
                 }
                 Err(e) => {
-                    error!("Error decoding PS/2 data");
+                    error!("Error decoding PS/2 data: {:?}", defmt::Debug2Format(&e));
                 }
             }
         }
@@ -74,9 +77,10 @@ impl PS2Port {
 
     async fn get_ps2_data(&mut self) -> Result<u16, TimeoutError> {
         self.clk_pin.wait_for_falling_edge().await;
-        info!("Got start of PS/2 packet");
 
         self.led_pin.set_high();
+
+        let mut bits_got = 0;
 
         let mut data: u16 = 0;
         // read 1 start bit, 8 data bits, 1 parity bit, 1 stop bit
@@ -87,18 +91,22 @@ impl PS2Port {
             )
             .await
             {
-                Ok(_) => data = (data << 1) | (self.data_pin.is_high() as u16),
+                Ok(_) => {
+                    data = ((self.data_pin.is_high() as u16) << 10) | (data >> 1);
+                    bits_got += 1;
+                }
 
-                Err(e) => {
-                    error!("Timeout while reading PS/2 packet");
+                r @ Err(_) => {
+                    error!("Incomplete PS/2 packet; got {} bits", bits_got);
                     self.led_pin.set_low();
-                    return Err(e);
+                    r?
                 }
             }
         }
 
         self.led_pin.set_low();
 
+        info!("Got PS/2 packet: {:011b}", data);
         Ok(data)
     }
 }
