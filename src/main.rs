@@ -19,14 +19,10 @@ use embassy_rp::{
     peripherals::USB,
     usb::{Driver, InterruptHandler},
 };
-use embassy_sync::mutex::Mutex;
 use keymap::{COL, ROW};
 // use embassy_rp::flash::Blocking;
 use panic_probe as _;
-use ps2::{
-    matrix::{PS2AsyncMutex, PS2Matrix},
-    port::PS2Port,
-};
+use ps2::{matrix::PS2Matrix, port::PS2Port};
 use rmk::{
     config::{KeyboardUsbConfig, RmkConfig, VialConfig},
     run_rmk_custom_matrix,
@@ -41,10 +37,11 @@ bind_interrupts!(struct Irqs {
 const FLASH_SIZE: usize = 2 * 1024 * 1024;
 
 #[embassy_executor::task]
-async fn ps2_background_read(port: &'static PS2AsyncMutex) {
+async fn ps2_background_read(port: &'static PS2Port) {
     info!("Begin PS/2 background task");
+    let pins = &mut port.pins.lock().await;
     loop {
-        port.lock().await.decode_next().await;
+        port.decode_next(pins).await;
     }
 }
 
@@ -63,8 +60,8 @@ async fn main(spawner: Spawner) {
     let clk_pin = Input::new(p.PIN_2, Pull::Up);
     let data_pin = Input::new(p.PIN_3, Pull::Up);
     let ps2_port = PS2Port::new(clk_pin, data_pin, led_pin);
-    static PS2_PORT: StaticCell<PS2AsyncMutex> = StaticCell::new();
-    let ps2_port = PS2_PORT.init(Mutex::new(ps2_port));
+    static PS2_PORT: StaticCell<PS2Port> = StaticCell::new();
+    let ps2_port = PS2_PORT.init(ps2_port);
 
     // Create key matrix
     let matrix: PS2Matrix<ROW, COL> = PS2Matrix::new(ps2_port);
