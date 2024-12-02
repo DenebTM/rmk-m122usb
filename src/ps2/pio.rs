@@ -6,7 +6,7 @@ use embassy_rp::{
         LoadedProgram, Pio, PioPin, ShiftDirection, StateMachine,
     },
 };
-use embedded_io_async::{ErrorType, Read};
+use embedded_io_async::ErrorType;
 use fixed::traits::ToFixed;
 
 struct PioPS2RxProgram<'a, PIO: PioInstance> {
@@ -90,16 +90,3 @@ impl<'a, PIO: PioInstance> PioPs2Rx<'a, PIO> {
 impl<PIO: PioInstance> ErrorType for PioPs2Rx<'_, PIO> {
     type Error = Infallible;
 }
-
-//impl<PIO: PioInstance> Read for PioPs2Rx<'_, PIO> {
-//    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, Infallible> {
-//        let mut i = 0;
-//        while (i + 1) < buf.len() {
-//            let packet = self.read_packet().await;
-//            buf[i] = (packet & 0xFF) as u8;
-//            buf[i + 1] = (packet >> 8) as u8;
-//            i += 2;
-//        }
-//        Ok(i)
-//    }
-//}
