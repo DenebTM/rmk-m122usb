@@ -73,7 +73,6 @@ pub fn get_default_keymap() -> [[[KeyAction; COL]; ROW]; NUM_LAYER] {
     let k6c = k!(A);
     let k6d = k!(A);
     let k6e = k!(A);
-    let k6f = k!(A);
     let k70 = k!(A);
     let k71 = k!(A);
     let k72 = k!(A);
@@ -96,6 +95,8 @@ pub fn get_default_keymap() -> [[[KeyAction; COL]; ROW]; NUM_LAYER] {
     let k8b = k!(A);
     let k8c = k!(A);
     let k8d = k!(A);
+    let k8e = k!(A);
+    let k8f = k!(A);
     let k91 = k!(A);
     let k93 = k!(A);
     let k94 = k!(A);
@@ -129,23 +130,21 @@ pub fn get_default_keymap() -> [[[KeyAction; COL]; ROW]; NUM_LAYER] {
     let kc1 = k!(A);
     let kc2 = k!(A);
     let kc4 = k!(A);
-    let kc8 = k!(A);
-    let kce = k!(A);
+    let kc9 = k!(A);
+    let kcd = k!(A);
     let kcf = k!(A);
     let kd1 = k!(A);
-    let kd3 = k!(A);
     let kd4 = k!(A);
     let kd5 = k!(A);
-    let kd6 = k!(A);
 
     [layer!([
-        [___,___,  ___,k03,k04,k05,k06,k07,k08,k09,k0a,k0b,k0c,k0d,k0e,    ___,  ___,___,___,  ___,___,___,___],
-        [___,___,  ___,k23,k24,k25,k26,k27,k28,k29,k2a,k2b,k2c,k2d,k2e,    ___,  ___,___,___,  ___,___,___,___],
+        [___,___,  ___,k03,k04,k05,k06,k07,k08,k09,k0a,k0b,k0c,k0d,k0e,___,  ___,___,___,  ___,___,___,___],
+        [___,___,  ___,k23,k24,k25,k26,k27,k28,k29,k2a,k2b,k2c,k2d,k2e,___,  ___,___,___,  ___,___,___,___],
 
-        [k40,k41,  k42,k43,k44,k45,k46,k47,k48,k49,k4a,k4b,k4c,k4d,k4e,  k4f,    k50,k51,k52,  k53,k54,k55,k56],
-        [k60,k61,  k62,k63,k64,k65,k66,k67,k68,k69,k6a,k6b,k6c,k6d,k6e,  k6f,    k70,k71,k72,  k73,k74,k75,k76],
-        [k80,k81,  k82,k83,k84,k85,k86,k87,k88,k89,k8a,k8b,k8c,k8d,___,  ___,    ___,k91,___,  k93,k94,k95,k96],
-        [ka0,ka1,  ka2,ka3,ka4,ka5,ka6,ka7,ka8,ka9,kaa,kab,kac,kad,___,  kaf,    kb0,kb1,kb2,  kb3,kb4,kb5,kb6],
-        [kc0,kc1,  kc2,___,kc4,___,___,___,kc8    ,___,___,___,___,kce,___,kcf,  ___,kd1,___,  kd3,kd4,kd5,kd6]
+        [k40,k41,  k42,k43,k44,k45,k46,k47,k48,k49,k4a,k4b,k4c,k4d,k4e, k4f,  k50,k51,k52,  k53,k54,k55,k56],
+        [k60,k61,  k62,k63,k64,k65,k66,k67,k68,k69,k6a,k6b,k6c,k6d,k6e, ___,  k70,k71,k72,  k73,k74,k75,k76],
+        [k80,k81,  k82,k83,k84,k85,k86,k87,k88,k89,k8a,k8b,k8c,k8d,k8e, k8f,  ___,k91,___,  k93,k94,k95,k96],
+        [ka0,ka1,  ka2,ka3,ka4,ka5,ka6,ka7,ka8,ka9,kaa,kab,kac,kad,___, kaf,  kb0,kb1,kb2,  kb3,kb4,kb5,kb6],
+        [kc0,kc1,  kc2,___,kc4,___,___,___,___,kc9,___,___,___, kcd,___,kcf,  ___,kd1,___,  ___,kd4,kd5,___]
     ]),]
 }
