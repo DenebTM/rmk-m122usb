@@ -58,10 +58,10 @@ async fn main(spawner: Spawner) {
 
     // Initialize PS/2 port
     let pio = Pio::new(p.PIO0, Irqs);
-    let clk_pin = p.PIN_2;
-    let data_pin = p.PIN_3;
+    let data_pin = p.PIN_2;
+    let clk_pin = p.PIN_3;
     let led_pin = Output::new(p.PIN_25, Level::Low);
-    let ps2_port = PS2Port::new(pio, clk_pin, data_pin, led_pin);
+    let ps2_port = PS2Port::new(pio, data_pin, clk_pin, led_pin);
     static PS2_PORT: StaticCell<PS2Port<PIO0>> = StaticCell::new();
     let ps2_port = PS2_PORT.init(ps2_port);
 

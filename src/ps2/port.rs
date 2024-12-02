@@ -64,13 +64,13 @@ pub(crate) struct PS2Port<PIO: PioInstance + 'static> {
 impl<PIO: PioInstance> PS2Port<PIO> {
     pub fn new(
         pio: Pio<'static, PIO>,
-        clk_pin: impl PioPin,
         data_pin: impl PioPin,
+        clk_pin: impl PioPin,
         led_pin: Output<'static>,
     ) -> Self {
         Self {
             pins: Mutex::new(PS2IO {
-                port: PioPs2Rx::new(pio, clk_pin, data_pin),
+                port: PioPs2Rx::new(pio, data_pin, clk_pin),
                 led: led_pin,
             }),
 

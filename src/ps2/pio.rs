@@ -20,14 +20,15 @@ impl<'a, PIO: PioInstance> PioPS2RxProgram<'a, PIO> {
             r#"
                 ; basic 8O1 clocked serial interface for PS/2
                 ; does not check start/stop bits nor parity
+                ; pin 0 is data, pin 1 is clock
 
                 start:
-                    wait 0 pin 0        ; wait for clock to be pulled low
+                    wait 0 pin 1        ; wait for clock to be pulled low
                     set x, 10           ; preload bit counter
 
                 rx_bitloop:
-                    wait 0 pin 0        ; wait for rising edge of the clock pin
-                    wait 1 pin 0
+                    wait 0 pin 1        ; wait for rising edge of the clock pin
+                    wait 1 pin 1
                     in pins, 1          ; shift data bit into ISR
                     jmp x-- rx_bitloop  ; loop 11 times
 
@@ -50,7 +51,7 @@ pub struct PioPs2Rx<'a, PIO: PioInstance> {
 
 impl<'a, PIO: PioInstance> PioPs2Rx<'a, PIO> {
     /// Configure a pio state machine to use the loaded rx program.
-    pub fn new(pio: Pio<'static, PIO>, clk_pin: impl PioPin, data_pin: impl PioPin) -> Self {
+    pub fn new(pio: Pio<'static, PIO>, data_pin: impl PioPin, clk_pin: impl PioPin) -> Self {
         let Pio {
             mut common,
             sm0: mut sm_rx,
@@ -62,12 +63,12 @@ impl<'a, PIO: PioInstance> PioPs2Rx<'a, PIO> {
         let mut cfg = Config::default();
         cfg.use_program(&program.prg, &[]);
 
-        let clk_pin = common.make_pio_pin(clk_pin);
         let data_pin = common.make_pio_pin(data_pin);
-        sm_rx.set_pins(Level::High, &[&clk_pin, &data_pin]);
-        cfg.set_in_pins(&[&clk_pin, &data_pin]);
+        let clk_pin = common.make_pio_pin(clk_pin);
+        sm_rx.set_pins(Level::High, &[&data_pin, &clk_pin]);
+        cfg.set_in_pins(&[&data_pin, &clk_pin]);
         cfg.set_jmp_pin(&clk_pin);
-        sm_rx.set_pin_dirs(PioDirection::In, &[&clk_pin, &data_pin]);
+        sm_rx.set_pin_dirs(PioDirection::In, &[&data_pin, &clk_pin]);
 
         cfg.clock_divider = 1.to_fixed();
         cfg.shift_in.auto_fill = false;
