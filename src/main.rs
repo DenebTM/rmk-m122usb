@@ -25,7 +25,7 @@ use keymap::{COL, ROW};
 use panic_probe as _;
 use ps2::{matrix::PS2Matrix, port::PS2Port};
 use rmk::{
-    config::{KeyboardUsbConfig, RmkConfig, VialConfig},
+    config::{KeyboardUsbConfig, RmkConfig, StorageConfig, VialConfig},
     run_rmk_custom_matrix,
 };
 use static_cell::StaticCell;
@@ -84,9 +84,15 @@ async fn main(spawner: Spawner) {
 
     let vial_config = VialConfig::new(VIAL_KEYBOARD_ID, VIAL_KEYBOARD_DEF);
 
+    let storage_config = StorageConfig {
+        clear_storage: true,
+        ..Default::default()
+    };
+
     let keyboard_config: RmkConfig<Output<'static>> = RmkConfig {
         usb_config: keyboard_usb_config,
         vial_config,
+        storage_config,
         ..Default::default()
     };
 
