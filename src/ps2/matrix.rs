@@ -39,12 +39,11 @@ impl<const ROW: usize, const COL: usize, PIO: PioInstance + 'static> MatrixTrait
         info!("PS/2 matrix scanning task");
 
         loop {
-            while let Some(key_event@KeyEvent { row, col, pressed }) = self.port.pop_event().await {
+            while let Some(key_event @ KeyEvent { row, col, pressed }) = self.port.pop_event().await
+            {
                 defmt::debug!("Processing PS/2 key event");
 
-                self.matrix[row as usize][col as usize] = KeyState {
-                    pressed
-                };
+                self.matrix[row as usize][col as usize] = KeyState { pressed };
 
                 let send_re = key_event_channel.try_send(key_event);
                 if send_re.is_err() {
