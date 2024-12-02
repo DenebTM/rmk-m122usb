@@ -6,7 +6,7 @@ pub(crate) const NUM_LAYER: usize = 1;
 
 #[rustfmt::skip]
 pub fn get_default_keymap() -> [[[KeyAction; COL]; ROW]; NUM_LAYER] {
-    let ___ = k!(A);
+    let ___ = k!(No);
 
     let k03 = k!(F13);
     let k04 = k!(F14);
@@ -37,16 +37,16 @@ pub fn get_default_keymap() -> [[[KeyAction; COL]; ROW]; NUM_LAYER] {
     let k40 = k!(Escape);
     let k41 = k!(RGui);
     let k42 = k!(Grave);
-    let k43 = k!(Kb1);
-    let k44 = k!(Kb2);
-    let k45 = k!(Kb3);
-    let k46 = k!(Kb4);
-    let k47 = k!(Kb5);
-    let k48 = k!(Kb6);
-    let k49 = k!(Kb7);
-    let k4a = k!(Kb8);
-    let k4b = k!(Kb9);
-    let k4c = k!(Kb0);
+    let k43 = k!(Kc1);
+    let k44 = k!(Kc2);
+    let k45 = k!(Kc3);
+    let k46 = k!(Kc4);
+    let k47 = k!(Kc5);
+    let k48 = k!(Kc6);
+    let k49 = k!(Kc7);
+    let k4a = k!(Kc8);
+    let k4b = k!(Kc9);
+    let k4c = k!(Kc0);
     let k4d = k!(Minus);
     let k4e = k!(Equal);
     let k4f = k!(Backspace);
@@ -96,7 +96,7 @@ pub fn get_default_keymap() -> [[[KeyAction; COL]; ROW]; NUM_LAYER] {
     let k8c = k!(Semicolon);
     let k8d = k!(Quote);
     let k8e = k!(NonusHash);
-    let k8f = k!(Return);
+    let k8f = k!(Enter);
     let k91 = k!(UP);
     let k93 = k!(Kp4);
     let k94 = k!(Kp5);
