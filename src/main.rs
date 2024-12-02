@@ -41,9 +41,10 @@ const FLASH_SIZE: usize = 2 * 1024 * 1024;
 #[embassy_executor::task]
 async fn ps2_background_read(port: &'static PS2Port<PIO0>) {
     info!("Begin PS/2 background task");
-    let pins = &mut port.pins.lock().await;
+    let ps2io = &mut port.ps2io.lock().await;
+    ps2io.led.set_low();
     loop {
-        port.decode_next(pins).await;
+        port.decode_next(ps2io).await;
     }
 }
 

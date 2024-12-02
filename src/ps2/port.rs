@@ -1,4 +1,4 @@
-use defmt::{error, info, warn};
+use defmt::{error, info, warn, Debug2Format};
 use embassy_rp::{
     gpio::Output,
     pio::{Instance as PioInstance, Pio, PioPin},
@@ -49,12 +49,12 @@ impl<T: Copy, const S: usize> EventQueue<T, S> {
 }
 
 pub(crate) struct PS2IO<PIO: PioInstance + 'static> {
-    port: PioPs2Rx<'static, PIO>,
-    led: Output<'static>,
+    pub(crate) port: PioPs2Rx<'static, PIO>,
+    pub(crate) led: Output<'static>,
 }
 
 pub(crate) struct PS2Port<PIO: PioInstance + 'static> {
-    pub(crate) pins: Mutex<CriticalSectionRawMutex, PS2IO<PIO>>,
+    pub(crate) ps2io: Mutex<CriticalSectionRawMutex, PS2IO<PIO>>,
 
     processor: Mutex<CriticalSectionRawMutex, (EventQueue<(KeyCode, KeyState), 256>, ScancodeSet2)>,
 
@@ -69,7 +69,7 @@ impl<PIO: PioInstance> PS2Port<PIO> {
         led_pin: Output<'static>,
     ) -> Self {
         Self {
-            pins: Mutex::new(PS2IO {
+            ps2io: Mutex::new(PS2IO {
                 port: PioPs2Rx::new(pio, data_pin, clk_pin),
                 led: led_pin,
             }),
@@ -107,11 +107,11 @@ impl<PIO: PioInstance> PS2Port<PIO> {
                             }
                         }
                         Ok(None) => warn!("Scan code without effect??"),
-                        Err(e) => error!("Error processing PS/2 scan code"),
+                        Err(e) => error!("Error processing PS/2 scan code: {:?}", Debug2Format(&e)),
                     };
                 }
                 Err(e) => {
-                    error!("Error decoding PS/2 data");
+                    error!("Error decoding PS/2 data: {:?}", Debug2Format(&e));
                 }
             }
         }
@@ -120,6 +120,7 @@ impl<PIO: PioInstance> PS2Port<PIO> {
     async fn get_ps2_data(ps2io: &mut PS2IO<PIO>) -> Result<u16, TimeoutError> {
         let data = ps2io.port.read_packet().await;
         info!("Got PS/2 packet: {:011b}", data);
+        ps2io.led.toggle();
         Ok(data)
     }
 }
