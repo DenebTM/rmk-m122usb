@@ -16,6 +16,7 @@ impl<T: Copy, const S: usize> EventQueue<T, S> {
 
     pub(super) fn push(&mut self, event: T) -> Result<(), ()> {
         if (self.write + 1) % S == self.read {
+            // ring buffer is full
             return Err(());
         }
 
@@ -26,10 +27,11 @@ impl<T: Copy, const S: usize> EventQueue<T, S> {
     }
 
     pub(super) fn pop(&mut self) -> Option<T> {
-        if self.read < self.write {
-            // TODO: handle overflow
+        if self.read != self.write {
+            // at least one element in ring buffer
             let event = self.events[self.read];
             self.read = (self.read + 1) % S;
+
             Some(event)
         } else {
             None
