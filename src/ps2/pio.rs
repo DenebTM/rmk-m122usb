@@ -2,34 +2,34 @@ use core::convert::Infallible;
 use embassy_rp::{
     gpio::Level,
     pio::{
-        Common, Config, Direction as PioDirection, FifoJoin, Instance, LoadedProgram, PioPin,
-        ShiftDirection, StateMachine,
+        Common, Config, Direction as PioDirection, FifoJoin, Instance as PioInstance,
+        LoadedProgram, Pio, PioPin, ShiftDirection, StateMachine,
     },
 };
 use embedded_io_async::{ErrorType, Read};
 use fixed::traits::ToFixed;
 
-pub struct PioPS2RxProgram<'a, PIO: Instance> {
+struct PioPS2RxProgram<'a, PIO: PioInstance> {
     prg: LoadedProgram<'a, PIO>,
 }
 
-impl<'a, PIO: Instance> PioPS2RxProgram<'a, PIO> {
+impl<'a, PIO: PioInstance> PioPS2RxProgram<'a, PIO> {
     /// Load the uart rx program into the given pio
-    pub fn new(common: &mut Common<'a, PIO>) -> Self {
+    fn new(common: &mut Common<'a, PIO>) -> Self {
         let prg = pio_proc::pio_asm!(
             r#"
                 ; basic 8O1 clocked serial interface for PS/2
+                ; does not check start/stop bits nor parity
 
                 start:
                     wait 0 pin 0        ; wait for clock to be pulled low
                     set x, 10           ; preload bit counter
 
                 rx_bitloop:
-                    wait 1 pin 0        ; wait for rising edge of the clock pin
+                    wait 0 pin 0        ; wait for rising edge of the clock pin
+                    wait 1 pin 0
                     in pins, 1          ; shift data bit into ISR
                     jmp x-- rx_bitloop  ; loop 11 times
-
-                    wait 1 pin 0        ; wait for clock pin to return to idle state
 
                 rx_stop:
                     in null 21
@@ -44,19 +44,21 @@ impl<'a, PIO: Instance> PioPS2RxProgram<'a, PIO> {
 }
 
 /// PIO backed Uart reciever
-pub struct PioPs2Rx<'a, PIO: Instance, const SM: usize> {
-    sm_rx: StateMachine<'a, PIO, SM>,
+pub struct PioPs2Rx<'a, PIO: PioInstance> {
+    sm_rx: StateMachine<'a, PIO, 0>,
 }
 
-impl<'a, PIO: Instance, const SM: usize> PioPs2Rx<'a, PIO, SM> {
+impl<'a, PIO: PioInstance> PioPs2Rx<'a, PIO> {
     /// Configure a pio state machine to use the loaded rx program.
-    pub fn new(
-        common: &mut Common<'a, PIO>,
-        mut sm_rx: StateMachine<'a, PIO, SM>,
-        clk_pin: impl PioPin,
-        data_pin: impl PioPin,
-        program: &PioPS2RxProgram<'a, PIO>,
-    ) -> Self {
+    pub fn new(pio: Pio<'static, PIO>, clk_pin: impl PioPin, data_pin: impl PioPin) -> Self {
+        let Pio {
+            mut common,
+            sm0: mut sm_rx,
+            ..
+        } = pio;
+
+        let program = PioPS2RxProgram::new(&mut common);
+
         let mut cfg = Config::default();
         cfg.use_program(&program.prg, &[]);
 
@@ -78,23 +80,25 @@ impl<'a, PIO: Instance, const SM: usize> PioPs2Rx<'a, PIO, SM> {
         Self { sm_rx }
     }
 
-    /// Wait for a single u8
-    pub async fn read_u8(&mut self) -> u8 {
-        self.sm_rx.rx().wait_pull().await as u8
+    /// Wait for PS/2 packet (8 bits + start/stop/parity)
+    pub async fn read_packet(&mut self) -> u16 {
+        self.sm_rx.rx().wait_pull().await as u16
     }
 }
 
-impl<PIO: Instance, const SM: usize> ErrorType for PioPs2Rx<'_, PIO, SM> {
+impl<PIO: PioInstance> ErrorType for PioPs2Rx<'_, PIO> {
     type Error = Infallible;
 }
 
-impl<PIO: Instance, const SM: usize> Read for PioPs2Rx<'_, PIO, SM> {
-    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, Infallible> {
-        let mut i = 0;
-        while i < buf.len() {
-            buf[i] = self.read_u8().await;
-            i += 1;
-        }
-        Ok(i)
-    }
-}
+//impl<PIO: PioInstance> Read for PioPs2Rx<'_, PIO> {
+//    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, Infallible> {
+//        let mut i = 0;
+//        while (i + 1) < buf.len() {
+//            let packet = self.read_packet().await;
+//            buf[i] = (packet & 0xFF) as u8;
+//            buf[i + 1] = (packet >> 8) as u8;
+//            i += 2;
+//        }
+//        Ok(i)
+//    }
+//}

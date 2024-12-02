@@ -15,9 +15,10 @@ use embassy_executor::Spawner;
 use embassy_rp::{
     bind_interrupts,
     flash::{Async, Flash},
-    gpio::{Input, Level, Output, Pull},
-    peripherals::USB,
-    usb::{Driver, InterruptHandler},
+    gpio::{Level, Output},
+    peripherals::{PIO0, USB},
+    pio::{self, Pio},
+    usb::{self, Driver},
 };
 use keymap::{COL, ROW};
 // use embassy_rp::flash::Blocking;
@@ -31,13 +32,14 @@ use static_cell::StaticCell;
 use vial::{VIAL_KEYBOARD_DEF, VIAL_KEYBOARD_ID};
 
 bind_interrupts!(struct Irqs {
-    USBCTRL_IRQ => InterruptHandler<USB>;
+    USBCTRL_IRQ => usb::InterruptHandler<USB>;
+    PIO0_IRQ_0 => pio::InterruptHandler<PIO0>;
 });
 
 const FLASH_SIZE: usize = 2 * 1024 * 1024;
 
 #[embassy_executor::task]
-async fn ps2_background_read(port: &'static PS2Port) {
+async fn ps2_background_read(port: &'static PS2Port<PIO0>) {
     info!("Begin PS/2 background task");
     let pins = &mut port.pins.lock().await;
     loop {
@@ -54,17 +56,17 @@ async fn main(spawner: Spawner) {
     // Create the usb driver, from the HAL
     let driver = Driver::new(p.USB, Irqs);
 
-    let led_pin = Output::new(p.PIN_25, Level::Low);
-
     // Initialize PS/2 port
-    let clk_pin = Input::new(p.PIN_2, Pull::Up);
-    let data_pin = Input::new(p.PIN_3, Pull::Up);
-    let ps2_port = PS2Port::new(clk_pin, data_pin, led_pin);
-    static PS2_PORT: StaticCell<PS2Port> = StaticCell::new();
+    let pio = Pio::new(p.PIO0, Irqs);
+    let clk_pin = p.PIN_2;
+    let data_pin = p.PIN_3;
+    let led_pin = Output::new(p.PIN_25, Level::Low);
+    let ps2_port = PS2Port::new(pio, clk_pin, data_pin, led_pin);
+    static PS2_PORT: StaticCell<PS2Port<PIO0>> = StaticCell::new();
     let ps2_port = PS2_PORT.init(ps2_port);
 
     // Create key matrix
-    let matrix: PS2Matrix<ROW, COL> = PS2Matrix::new(ps2_port);
+    let matrix: PS2Matrix<ROW, COL, PIO0> = PS2Matrix::new(ps2_port);
 
     // Use internal flash to emulate eeprom
     // Both blocking and async flash are support, use different API

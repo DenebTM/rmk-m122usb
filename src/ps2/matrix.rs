@@ -4,16 +4,17 @@ use rmk::{
     keyboard::{key_event_channel, KeyEvent},
     matrix::{KeyState, MatrixTrait},
 };
+use embassy_rp::pio::Instance as PioInstance;
 
 use super::port::PS2Port;
 
-pub struct PS2Matrix<const ROW: usize, const COL: usize> {
-    port: &'static PS2Port,
+pub struct PS2Matrix<const ROW: usize, const COL: usize, PIO: PioInstance + 'static> {
+    port: &'static PS2Port<PIO>,
     matrix: [[KeyState; COL]; ROW],
 }
 
-impl<const ROW: usize, const COL: usize> PS2Matrix<ROW, COL> {
-    pub fn new(port: &'static PS2Port) -> Self {
+impl<const ROW: usize, const COL: usize, PIO: PioInstance + 'static> PS2Matrix<ROW, COL, PIO> {
+    pub fn new(port: &'static PS2Port<PIO>) -> Self {
         Self {
             port,
             matrix: [[KeyState { pressed: false }; COL]; ROW],
@@ -28,7 +29,7 @@ fn keycode_to_pos(keycode: KeyCode) -> (usize, usize) {
     }
 }
 
-impl<const ROW: usize, const COL: usize> MatrixTrait for PS2Matrix<ROW, COL> {
+impl<const ROW: usize, const COL: usize, PIO: PioInstance + 'static> MatrixTrait for PS2Matrix<ROW, COL, PIO> {
     const ROW: usize = ROW;
     const COL: usize = COL;
 

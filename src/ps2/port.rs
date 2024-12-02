@@ -1,8 +1,13 @@
 use defmt::{error, info, warn};
-use embassy_rp::gpio::{Input, Output};
+use embassy_rp::{
+    gpio::Output,
+    pio::{Instance as PioInstance, Pio, PioPin},
+};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
-use embassy_time::{with_timeout, Duration, TimeoutError};
+use embassy_time::TimeoutError;
 use pc_keyboard::{KeyCode, KeyEvent, KeyState, Ps2Decoder, ScancodeSet, ScancodeSet2};
+
+use super::pio::PioPs2Rx;
 
 struct EventQueue<T: Copy, const S: usize> {
     write: usize,
@@ -43,31 +48,29 @@ impl<T: Copy, const S: usize> EventQueue<T, S> {
     }
 }
 
-pub(crate) struct Pins {
-    clk: Input<'static>,
-    data: Input<'static>,
-
+pub(crate) struct PS2IO<PIO: PioInstance + 'static> {
+    port: PioPs2Rx<'static, PIO>,
     led: Output<'static>,
 }
 
-pub(crate) struct PS2Port {
-    pub(crate) pins: Mutex<CriticalSectionRawMutex, Pins>,
+pub(crate) struct PS2Port<PIO: PioInstance + 'static> {
+    pub(crate) pins: Mutex<CriticalSectionRawMutex, PS2IO<PIO>>,
 
     processor: Mutex<CriticalSectionRawMutex, (EventQueue<(KeyCode, KeyState), 256>, ScancodeSet2)>,
 
     ps2_decoder: Ps2Decoder,
 }
 
-impl PS2Port {
+impl<PIO: PioInstance> PS2Port<PIO> {
     pub fn new(
-        clk_pin: Input<'static>,
-        data_pin: Input<'static>,
+        pio: Pio<'static, PIO>,
+        clk_pin: impl PioPin,
+        data_pin: impl PioPin,
         led_pin: Output<'static>,
     ) -> Self {
         Self {
-            pins: Mutex::new(Pins {
-                clk: clk_pin,
-                data: data_pin,
+            pins: Mutex::new(PS2IO {
+                port: PioPs2Rx::new(pio, clk_pin, data_pin),
                 led: led_pin,
             }),
 
@@ -91,7 +94,7 @@ impl PS2Port {
 
     /// wait for and decode the next PS/2 data packet
     /// if this completes a key event, add it to the event queue
-    pub async fn decode_next(&self, pins: &mut Pins) {
+    pub async fn decode_next(&self, pins: &mut PS2IO<PIO>) {
         if let Ok(ps2_data) = Self::get_ps2_data(pins).await {
             let decode_result = self.ps2_decoder.add_word(ps2_data);
             match decode_result {
@@ -114,32 +117,8 @@ impl PS2Port {
         }
     }
 
-    async fn get_ps2_data(pins: &mut Pins) -> Result<u16, TimeoutError> {
-        pins.clk.wait_for_falling_edge().await;
-
-        pins.led.set_high();
-
-        let mut bits_got = 0;
-
-        let mut data: u16 = 0;
-        // read 1 start bit, 8 data bits, 1 parity bit, 1 stop bit
-        for _ in 0..11 {
-            match with_timeout(Duration::from_millis(10), pins.clk.wait_for_rising_edge()).await {
-                Ok(_) => {
-                    data = ((pins.data.is_high() as u16) << 10) | (data >> 1);
-                    bits_got += 1;
-                }
-
-                r @ Err(_) => {
-                    error!("Incomplete PS/2 packet; got {} bits", bits_got);
-                    pins.led.set_low();
-                    r?
-                }
-            }
-        }
-
-        pins.led.set_low();
-
+    async fn get_ps2_data(ps2io: &mut PS2IO<PIO>) -> Result<u16, TimeoutError> {
+        let data = ps2io.port.read_packet().await;
         info!("Got PS/2 packet: {:011b}", data);
         Ok(data)
     }
