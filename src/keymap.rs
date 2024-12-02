@@ -127,7 +127,7 @@ pub fn get_default_keymap() -> [[[KeyAction; COL]; ROW]; NUM_LAYER] {
     let kb6 = k!(KpEnter);
 
     let kc0 = k!(LGui);
-    let kc1 = k!(Menu);
+    let kc1 = k!(Application);
     let kc2 = k!(LCtrl);
     let kc4 = k!(LAlt);
     let kc9 = k!(Space);
