@@ -1,4 +1,4 @@
-use defmt::{error, info, warn, Debug2Format};
+use defmt::*;
 use embassy_rp::{
     gpio::Output,
     pio::{Instance as PioInstance, Pio, PioPin},
@@ -106,7 +106,9 @@ impl<PIO: PioInstance> PS2Port<PIO> {
                                 error!("Event queue is full!")
                             }
                         }
-                        Ok(None) => warn!("Scan code without effect??"),
+                        Ok(None) => {
+                            // scan code without immediate effect (e.g. key release)
+                        },
                         Err(e) => error!("Error processing PS/2 scan code: {:?}", Debug2Format(&e)),
                     };
                 }
@@ -119,7 +121,7 @@ impl<PIO: PioInstance> PS2Port<PIO> {
 
     async fn get_ps2_data(ps2io: &mut PS2IO<PIO>) -> Result<u16, TimeoutError> {
         let data = ps2io.port.read_packet().await;
-        info!("Got PS/2 packet: {:011b}", data);
+        // debug!("Got PS/2 packet: {:011b}", data);
         ps2io.led.toggle();
         Ok(data)
     }
