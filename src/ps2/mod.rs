@@ -1,3 +1,4 @@
+mod event_queue;
 pub mod matrix;
-pub mod port;
 pub mod pio;
+pub mod port;

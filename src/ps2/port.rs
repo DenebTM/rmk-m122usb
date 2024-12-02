@@ -7,46 +7,8 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_time::TimeoutError;
 use pc_keyboard::{KeyCode, KeyEvent, KeyState, Ps2Decoder, ScancodeSet, ScancodeSet2};
 
-use super::pio::PioPs2Rx;
+use super::{event_queue::EventQueue, pio::PioPs2Rx};
 
-struct EventQueue<T: Copy, const S: usize> {
-    write: usize,
-    read: usize,
-
-    events: [T; S],
-}
-
-impl<T: Copy, const S: usize> EventQueue<T, S> {
-    fn new(init: T) -> Self {
-        Self {
-            events: [init; S],
-            write: 0,
-            read: 0,
-        }
-    }
-
-    fn push(&mut self, event: T) -> Result<(), ()> {
-        if (self.write + 1) % S == self.read {
-            return Err(());
-        }
-
-        self.events[self.write] = event;
-        self.write = (self.write + 1) % S;
-
-        Ok(())
-    }
-
-    fn pop(&mut self) -> Option<T> {
-        if self.read < self.write {
-            // TODO: handle overflow
-            let event = self.events[self.read];
-            self.read = (self.read + 1) % S;
-            Some(event)
-        } else {
-            None
-        }
-    }
-}
 
 pub(crate) struct PS2IO<PIO: PioInstance + 'static> {
     pub(crate) port: PioPs2Rx<'static, PIO>,
